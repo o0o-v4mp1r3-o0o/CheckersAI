@@ -199,6 +199,10 @@ public class Player extends Game{
                 }
             }
         }
+if(avoidRepeats.contains(hashNumber)){
+    drawPositionsReached++;
+    return 0;
+}
 
         Node pastNode = copyNode(curr);
         HashMap<Integer, ArrayList<int[]>> availableMoves;
@@ -233,6 +237,7 @@ public class Player extends Game{
         if(depth<=0 || checkWinner(curr,availableMoves)>0 || increment > maxdepth+10){
             return evaluate(curr,availableMoves, depth);
         }
+        avoidRepeats.add(hashNumber);
         float alphaOriginal = curr.playerTurn==1?alpha:beta;
         if(curr.playerTurn==1){
             float maximum = -Float.MAX_VALUE;
@@ -270,6 +275,7 @@ public class Player extends Game{
                         }
                         long newhash = tt.createHash(curr,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
                                 capturedpiece);
+
                         float eval = iterativedfs(depth - 1, alpha, beta, jumpx, jumpy, curr, increment + 1, newhash, trueAlpha,
                                 freePiecePlayerTurn, incstorage, freepieceScore);
                         undoTurn(curr, x, y, newx, newy, capturedpiece, movedPiece);
@@ -300,6 +306,7 @@ public class Player extends Game{
                 storage.score = maximum;
                 tt.ss.put(hashNumber, storage);
             }
+            avoidRepeats.remove(hashNumber);
             return alpha;
         }else{
             float minimum = Float.MAX_VALUE;
@@ -368,6 +375,7 @@ public class Player extends Game{
                 storage.score = minimum;
                 tt.ss.put(hashNumber, storage);
             }
+            avoidRepeats.remove(hashNumber);
             return beta;
         }
     }
@@ -459,7 +467,8 @@ public class Player extends Game{
                     System.out.println("hi");
                 }
                 long hashNumber = tt.initHash(node,0);
-                float score = dfs(3,-Float.MAX_VALUE,Float.MAX_VALUE,jumpx,jumpy,node,0, hashNumber, trueAlpha, 0,0,0);
+                float score = iterativedfs(3,-Float.MAX_VALUE,Float.MAX_VALUE,jumpx,jumpy,node,0, hashNumber,
+                        trueAlpha, 0,0,0);
                 undoTurn(curr,x,y,newx,newy,capturedpiece,movedPiece);
                 trueAlpha = Math.max(trueAlpha,score);
                 int scoreCode = x;
@@ -505,7 +514,8 @@ public class Player extends Game{
                     System.out.println("hi");
                 }
                 long hashNumber = tt.initHash(node,0);
-                float score = dfs(3,-Float.MAX_VALUE,Float.MAX_VALUE,jumpx,jumpy,node,0, hashNumber, trueAlpha, 0,0,0);
+                float score = iterativedfs(3,-Float.MAX_VALUE,Float.MAX_VALUE,jumpx,jumpy,node,0, hashNumber, trueAlpha,
+                        0,0,0);
                 undoTurn(curr,x,y,newx,newy,capturedpiece,movedPiece);
                 trueAlpha = Math.max(trueAlpha,score);
                 int scoreCode = x;
@@ -528,7 +538,7 @@ public class Player extends Game{
 
     public HashMap<Integer,Float> iterativeDeepening(Node curr, int finalI, int finalR){
         System.out.println("depth "+maxdepth);
-        System.out.println("avoidrepeats "+avoidRepeats.size());
+        System.out.println("avoidrepeats size"+avoidRepeats.size());
         System.out.println("trans table size "+tt.ss.size());
         LinkedHashMap<Integer,Float> shallow = finalI==-1?shallowSearch(curr):shallowSearch(curr,finalI,finalR);
         HashMap<Integer,Float> scores = new HashMap<>();

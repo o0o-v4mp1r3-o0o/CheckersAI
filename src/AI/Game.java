@@ -659,9 +659,9 @@ public class Game {
 //        LinkedHashMap<Integer,Float> testmap = player.shallowSearch(node);
 //        testmap.entrySet().stream().forEach(System.out::println);
         //HashMap<Integer,Float> scores = player.iterateThroughMoves(puzzle2node);
-        HashMap<Integer,Float> scores = player.iterativeDeepening(puzzle1node,-1,-1);
+        //HashMap<Integer,Float> scores = player.iterativeDeepening(puzzle1node,-1,-1);
         //HashMap<Integer,Float> scores1 = player.iterativeDeepening(puzzleKings,-1,-1);
-        //HashMap<Integer,Float> scores1 = player.iterativeDeepening(onewaytowin,-1,-1);
+        HashMap<Integer,Float> scores1 = player.iterativeDeepening(onewaytowin,-1,-1);
         //HashMap<Integer,Float> scores = player.iterateThroughMovesshallow(node);
         long end = System.nanoTime()/1000000000;
         System.out.println(player.numberOfNodes);

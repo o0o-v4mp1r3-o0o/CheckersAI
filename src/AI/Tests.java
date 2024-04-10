@@ -133,4 +133,18 @@ public class Tests {
         newboard[6][7] = 1;
         return newboard;
     }
+
+    short[][] puzzleKings(){
+        short[][] newboard = new short[8][8];
+        newboard[1][6] = 4;
+        newboard[4][5] = 3;
+        return newboard;
+    }
+
+    short[][] onewaytowin(){
+        short[][] newboard = new short[8][8];
+        newboard[1][6] = 4;
+        newboard[6][7] = 3;
+        return newboard;
+    }
 }

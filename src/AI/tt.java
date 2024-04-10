@@ -11,7 +11,6 @@ public class tt {
     long captureAvailable[] = new long[2];
     long overridden[] = new long[1];
     HashMap<Long,ttstorage> ss = new HashMap<>(400000);
-    HashMap<Long,ttstorage> moveorder = new HashMap<>(3000000);
 
     tt(){
         zobristFillArrays();
@@ -86,23 +85,24 @@ public class tt {
 
         if(node.playerTurn==1){
             returnKey ^= playerturn[0];
+        }else{
+            returnKey ^= playerturn[1];
         }
 
         return returnKey;
     }
 
-    long createHash(Node node, Node pastNode, int depthindex, long hash, int originx, int originy, int newx, int newy,
+    long createHash(Node node, int depthindex, long hash, int originx, int originy, int newx, int newy,
                     int capturex,
                     int capturey, int capturedpiece){
 
-//        if(pastNode.playerTurn==1){
-//            hash^=playerturn[0];
-//        }
-
         if(node.playerTurn==1){
+            hash^=playerturn[1];
             hash^=playerturn[0];
+        }else{
+            hash^=playerturn[0];
+            hash^=playerturn[1];
         }
-
 
         if(node.board[newx][newy]==1){ //xor to remove moved piece from original square
             hash ^= board[0][0][(originx*8)+originy];
@@ -150,11 +150,8 @@ public class tt {
         return hash;
     }
 
-    boolean overrideValue(int depth, ttstorage storage, long hashNumber, float score){
+    boolean overrideValue(int depth, ttstorage storage){
         if(depth > storage.depth){
-            storage.score = score;
-            storage.depth = depth;
-            ss.put(hashNumber,storage);
             return true;
         }
         return false;

@@ -6,12 +6,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Player extends Game{
-    public static int maxdepth = 9;
+    public static int maxdepth = 10;
     Evaluate addedScore = new Evaluate();
     public long numberOfNodes;
     public long nodesPruned = 0;
-    public long bestmovenotpicked = 0;
+    public long drawPositionsReached = 0;
     tt tt = new tt();
+    HashMap<Long,Integer> drawCounter = new HashMap<>();
     Set<Long> avoidRepeats = new HashSet<>(6000);
     ArrayList<Node> debugger = new ArrayList<>();
 
@@ -43,9 +44,6 @@ public class Player extends Game{
             int jumpx, int jumpy, Node curr, int increment, long hashNumber, float trueAlpha, int freePiecePlayerTurn
             , int incstorage, float freepieceScore){
         numberOfNodes++;
-        if(numberOfNodes==309){
-            System.out.println();
-        }
         if((curr.redKingcount > 0 || curr.blackKingcount > 0)){
             if(avoidRepeats.contains(hashNumber)){
                 return 0;
@@ -57,7 +55,7 @@ public class Player extends Game{
 //        }
         if(tt.ss.containsKey(hashNumber) && (curr.redKingcount > 0 || curr.blackKingcount > 0) ){
             nodesPruned++;
-            if(tt.overrideValue(depth,tt.ss.get(hashNumber),hashNumber,alpha)){
+            if(tt.overrideValue(depth,tt.ss.get(hashNumber))){
                 nodesPruned--;
             }else{
                 avoidRepeats.remove(hashNumber);
@@ -82,7 +80,7 @@ public class Player extends Game{
                 if(increment-incstorage==4){
                     if(freepieceScore >= pastNode.redpiececount-pastNode.blackpiececount){
                         avoidRepeats.remove(hashNumber);
-                        return evaluate(pastNode,availableMoves);
+                        return evaluate(pastNode,availableMoves, depth);
                     }
                     freepieceScore = 0; freePiecePlayerTurn = 0; incstorage = 0;
                 }
@@ -90,7 +88,7 @@ public class Player extends Game{
                 if(increment-incstorage==4){
                     if(freepieceScore >= pastNode.blackpiececount-pastNode.redpiececount){
                         avoidRepeats.remove(hashNumber);
-                        return evaluate(pastNode,availableMoves);
+                        return evaluate(pastNode,availableMoves, depth);
                     }
                     freepieceScore = 0; freePiecePlayerTurn = 0; incstorage = 0;
                 }
@@ -100,7 +98,7 @@ public class Player extends Game{
         if(curr.captureAvailable==true) depth++;
         if(depth<=0 || checkWinner(curr,availableMoves)>0 || increment > maxdepth+10){
             if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
-            return evaluate(curr,availableMoves);
+            return evaluate(curr,availableMoves, depth);
         }
         if(curr.playerTurn==1){
             float maximum = -Float.MAX_VALUE;
@@ -117,7 +115,7 @@ public class Player extends Game{
                     nodeMove(curr, curr.playerTurn, x, y, newx, newy);
                     if(curr.justcaptured){jumpx = newx; jumpy=newy; freePiecePlayerTurn = 1;incstorage
                             = increment; increment-=1; freepieceScore = curr.redpiececount-curr.blackpiececount;}
-                    long newhash = tt.createHash(curr,pastNode,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
+                    long newhash = tt.createHash(curr,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
                             capturedpiece);
                     float eval = dfs(depth - 1, alpha, beta,jumpx,jumpy,curr, increment+1, newhash,trueAlpha,
                             freePiecePlayerTurn, incstorage, freepieceScore);
@@ -154,7 +152,7 @@ public class Player extends Game{
                     nodeMove(curr, curr.playerTurn, x, y, newx, newy);
                     if(curr.justcaptured){jumpx = newx; jumpy=newy;freePiecePlayerTurn = 2; incstorage
                             = increment; increment-=1; freepieceScore = curr.blackpiececount-curr.redpiececount;}
-                    long newhash = tt.createHash(curr,pastNode,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
+                    long newhash = tt.createHash(curr,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
                             capturedpiece);
                     float eval = dfs(depth - 1, alpha, beta,jumpx,jumpy,curr,increment+1, newhash, trueAlpha,
                             freePiecePlayerTurn,incstorage,freepieceScore);
@@ -179,329 +177,29 @@ public class Player extends Game{
         }
     }
 
-    public float iterativedfsREAL(int depth, float alpha, float beta,
-              int jumpx, int jumpy, Node curr, int increment, long hashNumber, float trueAlpha, int freePiecePlayerTurn
-            , int incstorage, float freepieceScore){
-        numberOfNodes++;
-        //curr.hashNumber = hashNumber;
-        if((curr.redKingcount > 0 || curr.blackKingcount > 0)){
-            if(avoidRepeats.contains(hashNumber)){
-                return 0;
-            }
-            avoidRepeats.add(hashNumber);
-        }
-//        if(checkposition(curr.board)){
-//            debugger.add(deepCopyNode(curr));
-//        }
-        int bestMove = 0; boolean bmtrigger = false;
-        ttstorage ttt = null;
-        if(tt.ss.containsKey(hashNumber)){
-            nodesPruned++;
-            ttt = tt.ss.get(hashNumber);
-            if(tt.overrideValue(depth,tt.ss.get(hashNumber),hashNumber,alpha,beta, trueAlpha)){
-                nodesPruned--;
-                bestMove = tt.ss.get(hashNumber).bestmove;
-                bmtrigger=true;
-//                if(bestMove==4321 && depth==2 && increment==4){
-//                    System.out.println();
-//                }
-            }else{
-                avoidRepeats.remove(hashNumber);
-                return tt.ss.get(hashNumber).score;
-            }
-        }
-        Node pastNode = copyNode(curr);
-        HashMap<Integer, ArrayList<int[]>> availableMoves;
-        if(curr.justcaptured){
-            availableMoves = pieceThatCanCapture(curr.playerTurn,curr.board,jumpx,jumpy, curr);
-            if(availableMoves.size()==0){
-                changeTurn(pastNode);
-                changeTurn(curr);
-                availableMoves = piecesThatCanMove(curr.playerTurn,curr.board,curr);
-            }
-        }else{
-            availableMoves = piecesThatCanMove(curr.playerTurn, curr.board, curr);
-        }
-        if(availableMoves.size()==1){
-            bmtrigger=false;
-            bestMove=0;
-        }
-
-        if(freePiecePlayerTurn>0){
-            if(freePiecePlayerTurn==1){
-                if(increment-incstorage==4){
-                    if(freepieceScore >= pastNode.redpiececount-pastNode.blackpiececount){
-                        avoidRepeats.remove(hashNumber);
-                        return evaluate(pastNode,availableMoves);
-                    } freepieceScore = 0; freePiecePlayerTurn = 0; incstorage = 0;
-                }
-            }else{
-                if(increment-incstorage==4){
-                    if(freepieceScore >= pastNode.blackpiececount-pastNode.redpiececount) {
-                        avoidRepeats.remove(hashNumber);
-                        return evaluate(pastNode,availableMoves);
-                    } freepieceScore = 0; freePiecePlayerTurn = 0; incstorage = 0;
-                }
-            }
-        }
-
-        if(curr.captureAvailable==true) depth++;
-        if(depth<=0 || checkWinner(curr,availableMoves)>0 || increment > maxdepth+10){
-            if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
-            return evaluate(curr,availableMoves);
-        }
-        if(curr.playerTurn==1){
-            float maximum = -Float.MAX_VALUE;
-            for(int ii = 0; ii < 2; ii++){
-                if(!bmtrigger && ii==0) continue;
-                for(Map.Entry<Integer, ArrayList<int[]>> eachPiece : availableMoves.entrySet()) {
-                    int x;
-                    int y;
-                    if (bestMove > 0 && ii==0) {
-                        x = bestMove / 1000;
-                        y = (bestMove % 1000) / 100;
-                    } else {
-                        x = eachPiece.getKey() / 10;
-                        y = eachPiece.getKey() % 10;
-                    }
-                    if(ii==1){
-                        if(x==bestMove / 1000 && y==(bestMove % 1000) / 100) continue;
-                    }
-                    ArrayList<int[]> eachMove;
-                    if (bestMove > 0 && ii==0) {
-                        eachMove = availableMoves.get(x*10+y);
-                        if(eachMove==null){
-                            bestmovenotpicked++;
-                            break;
-                        }
-                        Collections.swap(eachMove, 0, findIndex(eachMove,(bestMove % 100) / 10,bestMove % 10));
-                    } else {
-                        eachMove = eachPiece.getValue();
-                    }
-
-                    for (int i = 0; i < eachMove.size(); i++) {
-                        curr = copyNode(pastNode);
-                        int newx;
-                        int newy;
-
-                        newx = eachMove.get(i)[0];
-                        newy = eachMove.get(i)[1];
-                        int capturedpiece = curr.board[(x + newx) / 2][(y + newy) / 2];
-                        int movedPiece = curr.board[x][y];
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
-//                        if (newy == 1 && newx == 2 && y == 3 && x == 4 && depth==2) {
-//                            System.out.println();
-//                        }
-                        nodeMove(curr, curr.playerTurn, x, y, newx, newy);
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
-                        if (curr.justcaptured) {
-                            jumpx = newx;
-                            jumpy = newy;
-                            freePiecePlayerTurn = 1;
-                            incstorage
-                                    = increment;
-                            increment -= 1;
-                            freepieceScore = curr.redpiececount - curr.blackpiececount;
-                        }
-//                        if(checkposition(curr.board)){
-//                            System.out.println();
-//                        }
-                        long newhash = tt.initHash(curr, 0);
-                        float eval = iterativedfs(depth - 1, alpha, beta, jumpx, jumpy, curr, increment + 1, newhash, trueAlpha,
-                                freePiecePlayerTurn, incstorage, freepieceScore);
-        //                    if(!integriryChecker(curr)){
-        //                        System.out.println();
-        //                    }
-                        undoTurn(curr, x, y, newx, newy, capturedpiece, movedPiece);
-        //                    if(!integriryChecker(curr)){
-        //                        System.out.println();
-        //                    }
-                        boolean foundnewbest = false;
-                        if (eval > maximum) {
-                            maximum = eval;
-                            foundnewbest = true;
-                        }
-                        alpha = Math.max(alpha, maximum);
-                        //if(alpha >= maximum) newhash ^= AI.tt.overridden[0];
-                        ttstorage storage = new ttstorage();
-                        storage.depth = depth;
-                        storage.score = eval;
-                        int scoreCode = x;
-                        scoreCode = (scoreCode * 10) + y;
-                        scoreCode = (scoreCode * 10) + newx;
-                        scoreCode = (scoreCode * 10) + newy;
-
-                        if (!tt.ss.containsKey(hashNumber)) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-                        } else if (foundnewbest) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-                        }
-                        if (trueAlpha >= beta) {
-                            break;
-                        }
-                        if (alpha >= beta) {
-                            break;
-                        }
-                    }
-                    if(bmtrigger && ii==0) {
-                        break;
-                    }
-                }
-            }
-            if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
-            return alpha;
-        }else{
-            float minimum = Float.MAX_VALUE;
-            for(int ii = 0; ii < 2; ii++){
-                if(!bmtrigger && ii==0) continue;
-                for(Map.Entry<Integer, ArrayList<int[]>> eachPiece : availableMoves.entrySet()) {
-                    int x;
-                    int y;
-                    if (bestMove > 0 && ii==0) {
-                        x = bestMove / 1000;
-                        y = (bestMove % 1000) / 100;
-                    } else {
-                        x = eachPiece.getKey() / 10;
-                        y = eachPiece.getKey() % 10;
-                    }
-                    if(ii==1){
-                        if(x==bestMove / 1000 && y==(bestMove % 1000) / 100) continue;
-                    }
-                    ArrayList<int[]> eachMove;
-                    if (bestMove > 0 && ii==0) {
-                        eachMove = availableMoves.get(x*10+y);
-                        if(eachMove==null){
-                            bestmovenotpicked++;
-                            break;
-                        }
-                        Collections.swap(eachMove, 0, findIndex(eachMove,(bestMove % 100) / 10,bestMove % 10));
-
-                    } else {
-                        eachMove = eachPiece.getValue();
-                    }
-                    for (int i = 0; i < eachMove.size(); i++) {
-                        curr = copyNode(pastNode);
-                        int newx;
-                        int newy;
-                        newx = eachMove.get(i)[0];
-                        newy = eachMove.get(i)[1];
-
-                        int capturedpiece = curr.board[(x + newx) / 2][(y + newy) / 2];
-                        int movedPiece = curr.board[x][y];
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
-//                        if (newy == 1 && newx == 2 && y == 3 && x == 4 && depth==2) {
-//                            System.out.println();
-//                        }
-                        nodeMove(curr, curr.playerTurn, x, y, newx, newy);
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
-                        if (curr.justcaptured) {
-                            jumpx = newx;
-                            jumpy = newy;
-                            freePiecePlayerTurn = 2;
-                            incstorage
-                                    = increment;
-                            increment -= 1;
-                            freepieceScore = curr.blackpiececount - curr.redpiececount;
-                        }
-//                        if(checkposition(curr.board)){
-//                            System.out.println();
-//                        }
-                        long newhash = tt.initHash(curr, 0);
-                        float eval = iterativedfs(depth - 1, alpha, beta, jumpx, jumpy, curr, increment + 1, newhash, trueAlpha,
-                                freePiecePlayerTurn, incstorage, freepieceScore);
-    //                    if(!integriryChecker(curr)){
-    //                        System.out.println();
-    //                    }
-                        undoTurn(curr, x, y, newx, newy, capturedpiece, movedPiece);
-    //                    if(!integriryChecker(curr)){
-    //                        System.out.println();
-    //                    }
-                        boolean foundnewbest = false;
-                        if (eval < minimum) {
-                            minimum = eval;
-                            foundnewbest = true;
-                        }
-                        beta = Math.min(beta, minimum);
-
-                        ttstorage storage = new ttstorage();
-                        storage.depth = depth;
-                        storage.score = eval;
-                        int scoreCode = x;
-                        scoreCode = (scoreCode * 10) + y;
-                        scoreCode = (scoreCode * 10) + newx;
-                        scoreCode = (scoreCode * 10) + newy;
-
-                        if (!tt.ss.containsKey(hashNumber)) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-//                            if(scoreCode==4321){
-//                                System.out.println();
-//                            }
-                        }
-                        if (foundnewbest) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-//                            if(scoreCode==4321){
-//                                System.out.println();
-//                            }
-                        }
-                        if (trueAlpha >= beta) {
-                            break;
-                        }
-                        if (alpha >= beta) {
-                            break;
-                        }
-                    }
-                    if(bmtrigger && ii==0) {
-                        break;
-                    }
-                }
-            }
-            if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
-            return beta;
-        }
-    }
-
     public float iterativedfs(int depth, float alpha, float beta,
                               int jumpx, int jumpy, Node curr, int increment, long hashNumber, float trueAlpha, int freePiecePlayerTurn
             , int incstorage, float freepieceScore){
+
         numberOfNodes++;
-        //curr.hashNumber = hashNumber;
-        if((curr.redKingcount > 0 || curr.blackKingcount > 0)){
-//            if(avoidRepeats.contains(hashNumber)){
-//                return -50;
-//            }
-            avoidRepeats.add(hashNumber);
-        }
-//        if(checkposition(curr.board)){
-//            debugger.add(deepCopyNode(curr));
-//        }
 
-        ttstorage ttt = null;
         if(tt.ss.containsKey(hashNumber)){
-            nodesPruned++;
-            ttt = tt.ss.get(hashNumber);
-            if(tt.overrideValue(depth,tt.ss.get(hashNumber),hashNumber,alpha,beta, trueAlpha)){
-                nodesPruned--;
-
-//                if(bestMove==4321 && depth==2 && increment==4){
-//                    System.out.println();
-//                }
-            }else{
-                avoidRepeats.remove(hashNumber);
-                return tt.ss.get(hashNumber).score;
+            if(tt.overrideValue(depth,tt.ss.get(hashNumber))){
+                if (tt.ss.get(hashNumber).flag == 0) {
+                    nodesPruned++;
+                    return tt.ss.get(hashNumber).score;
+                } else if (tt.ss.get(hashNumber).flag == 2) {
+                    alpha = Math.max(alpha, tt.ss.get(hashNumber).score);
+                } else if (tt.ss.get(hashNumber).flag== 1) {
+                    beta = Math.min(beta, tt.ss.get(hashNumber).score);
+                }
+                if (alpha >= beta) {
+                    nodesPruned++;
+                    return tt.ss.get(hashNumber).score;
+                }
             }
         }
+
         Node pastNode = copyNode(curr);
         HashMap<Integer, ArrayList<int[]>> availableMoves;
         if(curr.justcaptured){
@@ -515,20 +213,17 @@ public class Player extends Game{
             availableMoves = piecesThatCanMove(curr.playerTurn, curr.board, curr);
         }
 
-
         if(freePiecePlayerTurn>0){
             if(freePiecePlayerTurn==1){
                 if(increment-incstorage==4){
                     if(freepieceScore >= pastNode.redpiececount-pastNode.blackpiececount){
-                        avoidRepeats.remove(hashNumber);
-                        return evaluate(pastNode,availableMoves);
+                        return evaluate(pastNode,availableMoves, depth);
                     } freepieceScore = 0; freePiecePlayerTurn = 0; incstorage = 0;
                 }
             }else{
                 if(increment-incstorage==4){
                     if(freepieceScore >= pastNode.blackpiececount-pastNode.redpiececount) {
-                        avoidRepeats.remove(hashNumber);
-                        return evaluate(pastNode,availableMoves);
+                        return evaluate(pastNode,availableMoves, depth);
                     } freepieceScore = 0; freePiecePlayerTurn = 0; incstorage = 0;
                 }
             }
@@ -536,12 +231,11 @@ public class Player extends Game{
 
         if(curr.captureAvailable==true) depth++;
         if(depth<=0 || checkWinner(curr,availableMoves)>0 || increment > maxdepth+10){
-            if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
-            return evaluate(curr,availableMoves);
+            return evaluate(curr,availableMoves, depth);
         }
+        float alphaOriginal = curr.playerTurn==1?alpha:beta;
         if(curr.playerTurn==1){
             float maximum = -Float.MAX_VALUE;
-            for(int ii = 0; ii < 2; ii++){
 
                 for(Map.Entry<Integer, ArrayList<int[]>> eachPiece : availableMoves.entrySet()) {
                     int x;
@@ -564,16 +258,7 @@ public class Player extends Game{
                         newy = eachMove.get(i)[1];
                         int capturedpiece = curr.board[(x + newx) / 2][(y + newy) / 2];
                         int movedPiece = curr.board[x][y];
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
-//                        if (newy == 1 && newx == 2 && y == 3 && x == 4 && depth==2) {
-//                            System.out.println();
-//                        }
                         nodeMove(curr, curr.playerTurn, x, y, newx, newy);
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
                         if (curr.justcaptured) {
                             jumpx = newx;
                             jumpy = newy;
@@ -583,57 +268,41 @@ public class Player extends Game{
                             increment -= 1;
                             freepieceScore = curr.redpiececount - curr.blackpiececount;
                         }
-//                        if(checkposition(curr.board)){
-//                            System.out.println();
-//                        }
-                        long newhash = tt.initHash(curr, 0);
+                        long newhash = tt.createHash(curr,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
+                                capturedpiece);
                         float eval = iterativedfs(depth - 1, alpha, beta, jumpx, jumpy, curr, increment + 1, newhash, trueAlpha,
                                 freePiecePlayerTurn, incstorage, freepieceScore);
-                        //                    if(!integriryChecker(curr)){
-                        //                        System.out.println();
-                        //                    }
                         undoTurn(curr, x, y, newx, newy, capturedpiece, movedPiece);
-                        //                    if(!integriryChecker(curr)){
-                        //                        System.out.println();
-                        //                    }
-                        boolean foundnewbest = false;
                         if (eval > maximum) {
                             maximum = eval;
-                            foundnewbest = true;
                         }
                         alpha = Math.max(alpha, maximum);
-                        //if(alpha >= maximum) newhash ^= AI.tt.overridden[0];
-                        ttstorage storage = new ttstorage();
-                        storage.depth = depth;
-                        storage.score = eval;
-                        int scoreCode = x;
-                        scoreCode = (scoreCode * 10) + y;
-                        scoreCode = (scoreCode * 10) + newx;
-                        scoreCode = (scoreCode * 10) + newy;
 
-                        if (!tt.ss.containsKey(hashNumber)) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-                        } else if (foundnewbest) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-                        }
-                        if (trueAlpha >= beta) {
-                            break;
-                        }
+//                        if (trueAlpha >= beta) {
+//                            break;
+//                        }
                         if (alpha >= beta) {
                             break;
                         }
                     }
 
                 }
+            ttstorage storage = new ttstorage();
+            if (maximum <= alphaOriginal) {
+                storage.flag = 1;
+            } else if (maximum >= beta) {
+                storage.flag = 2;
+            } else {
+                storage.flag = 0;
             }
-            if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
+            if(maximum !=0) {
+                storage.depth = depth;
+                storage.score = maximum;
+                tt.ss.put(hashNumber, storage);
+            }
             return alpha;
         }else{
             float minimum = Float.MAX_VALUE;
-            for(int ii = 0; ii < 2; ii++){
-
                 for(Map.Entry<Integer, ArrayList<int[]>> eachPiece : availableMoves.entrySet()) {
                     int x;
                     int y;
@@ -655,16 +324,7 @@ public class Player extends Game{
 
                         int capturedpiece = curr.board[(x + newx) / 2][(y + newy) / 2];
                         int movedPiece = curr.board[x][y];
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
-//                        if (newy == 1 && newx == 2 && y == 3 && x == 4 && depth==2) {
-//                            System.out.println();
-//                        }
                         nodeMove(curr, curr.playerTurn, x, y, newx, newy);
-//                        if (!integriryChecker(curr)) {
-//                            System.out.println();
-//                        }
                         if (curr.justcaptured) {
                             jumpx = newx;
                             jumpy = newy;
@@ -674,70 +334,51 @@ public class Player extends Game{
                             increment -= 1;
                             freepieceScore = curr.blackpiececount - curr.redpiececount;
                         }
-//                        if(checkposition(curr.board)){
-//                            System.out.println();
-//                        }
-                        long newhash = tt.initHash(curr, 0);
+                        long newhash = tt.createHash(curr,0,hashNumber,x,y,newx,newy,(x+newx)/2,(y+newy)/2,
+                                capturedpiece);
                         float eval = iterativedfs(depth - 1, alpha, beta, jumpx, jumpy, curr, increment + 1, newhash, trueAlpha,
                                 freePiecePlayerTurn, incstorage, freepieceScore);
-                        //                    if(!integriryChecker(curr)){
-                        //                        System.out.println();
-                        //                    }
                         undoTurn(curr, x, y, newx, newy, capturedpiece, movedPiece);
-                        //                    if(!integriryChecker(curr)){
-                        //                        System.out.println();
-                        //                    }
-                        boolean foundnewbest = false;
                         if (eval < minimum) {
                             minimum = eval;
-                            foundnewbest = true;
                         }
                         beta = Math.min(beta, minimum);
 
-                        ttstorage storage = new ttstorage();
-                        storage.depth = depth;
-                        storage.score = eval;
-                        int scoreCode = x;
-                        scoreCode = (scoreCode * 10) + y;
-                        scoreCode = (scoreCode * 10) + newx;
-                        scoreCode = (scoreCode * 10) + newy;
 
-                        if (!tt.ss.containsKey(hashNumber)) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-//                            if(scoreCode==4321){
-//                                System.out.println();
-//                            }
-                        }
-                        if (foundnewbest) {
-                            storage.bestmove = scoreCode;
-                            tt.ss.put(hashNumber, storage);
-//                            if(scoreCode==4321){
-//                                System.out.println();
-//                            }
-                        }
-                        if (trueAlpha >= beta) {
-                            break;
-                        }
+//                        if (trueAlpha >= beta) {
+//                            break;
+//                        }
                         if (alpha >= beta) {
                             break;
                         }
                     }
 
                 }
+            ttstorage storage = new ttstorage();
+            if (minimum <= alphaOriginal) {
+                storage.flag = 1;
+            } else if (minimum >= beta) {
+                storage.flag = 2;
+            } else {
+                storage.flag = 0;
             }
-            if((curr.redKingcount > 0 || curr.blackKingcount > 0)) avoidRepeats.remove(hashNumber);
+
+            if(minimum !=0) {
+                storage.depth = depth;
+                storage.score = minimum;
+                tt.ss.put(hashNumber, storage);
+            }
             return beta;
         }
     }
 
-    float evaluate(Node node,HashMap<Integer, ArrayList<int[]>> availableMoves){
+    float evaluate(Node node,HashMap<Integer, ArrayList<int[]>> availableMoves, int depth){
         float score = 0;
-        if(node.blackpiececount==0) return 100;
-        if(node.redpiececount==0) return -100;
+        if(node.blackpiececount==0) return 100-(maxdepth-depth);
+        if(node.redpiececount==0) return -100+(maxdepth-depth);
         if(availableMoves.size()==0){
-            if(node.playerTurn==1) return -100;
-            if(node.playerTurn==2) return 100;
+            if(node.playerTurn==1) return -100+(maxdepth-depth);
+            if(node.playerTurn==2) return 100-(maxdepth-depth);
         }
         if(node.blackpiececount > node.redpiececount) score -= (node.blackpiececount - node.redpiececount);
         if(node.redpiececount > node.blackpiececount) score += (node.redpiececount - node.blackpiececount);
@@ -834,7 +475,8 @@ public class Player extends Game{
                 .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
                 .collect(Collectors.toMap(
                         Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
-        tt.ss.clear();
+        //tt.ss.clear();
+        avoidRepeats.clear();
         return ss;
     }
 
@@ -879,11 +521,15 @@ public class Player extends Game{
                 .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
                 .collect(Collectors.toMap(
                         Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
-        tt.ss.clear();
+        //tt.ss.clear();
+        avoidRepeats.clear();
         return ss;
     }
 
     public HashMap<Integer,Float> iterativeDeepening(Node curr, int finalI, int finalR){
+        System.out.println("depth "+maxdepth);
+        System.out.println("avoidrepeats "+avoidRepeats.size());
+        System.out.println("trans table size "+tt.ss.size());
         LinkedHashMap<Integer,Float> shallow = finalI==-1?shallowSearch(curr):shallowSearch(curr,finalI,finalR);
         HashMap<Integer,Float> scores = new HashMap<>();
         float trueAlpha = -Float.MAX_VALUE;
@@ -912,30 +558,23 @@ public class Player extends Game{
                     jumpx = newx;
                     jumpy = newy;
                 }
-                if (x == 7 && y == 2) {
-                    System.out.println("hi"); //o
-                }
-                if (x == 4 && y == 3 && newx == 3 && newy == 4 && i==10) {
-                    System.out.println("hi");
-                }
+
                 long hashNumber = tt.initHash(node, 0);
                 float score = iterativedfs(i + 1, -Float.MAX_VALUE, Float.MAX_VALUE, jumpx, jumpy, node, 0,
                         hashNumber, trueAlpha, 0,0,0);
                 undoTurn(curr, x, y, newx, newy, capturedpiece, movedPiece);
-//                if(!checkposition(node.board) && !integriryChecker(node)){
-//                    System.out.println();
-//                }
+
                 trueAlpha = Math.max(trueAlpha, score);
                 int scoreCode = x;
                 scoreCode = (scoreCode * 10) + y;
                 scoreCode = (scoreCode * 10) + newx;
                 scoreCode = (scoreCode * 10) + newy;
                 shallow.put(scoreCode, score);
-                avoidRepeats.clear();
+                //System.out.println("avoidRepeats Size: "+ avoidRepeats.size());
             }
         }
         scores.putAll(shallow);
-        tt.ss.clear();
+        //tt.ss.clear();
 
         return scores;
     }

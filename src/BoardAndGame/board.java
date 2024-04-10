@@ -27,6 +27,7 @@ public class board extends JPanel {
     int blackKings = 0;
     int drawMoves = 0;
     int threadcounter = 0;
+    int numMoves = 0;
     Game game = new Game();
     public Player player = new Player();
     testBoards testboards = new testBoards();
@@ -76,6 +77,7 @@ public class board extends JPanel {
                 squares[i][row].ycoord=row;
             }
         }
+
         initBoard();
 //        testboards.initboardcantmove(redPieces,blackPieces,squares,this);
 //        if(!isPlayerRed) machineMove(-1,-1);
@@ -164,6 +166,7 @@ public class board extends JPanel {
 
     void initBoard() throws IOException {
         //init black side
+
         for(int i = 0; i < 3; i++){
             for(int c = 0; c < 8; c++){
                 if(i%2==0) {
@@ -601,7 +604,10 @@ public class board extends JPanel {
         HashMap<Integer,Float> moves = new HashMap<>();
 
         short[][] Nboard = constructNboard();
-
+        int storedepth = Player.maxdepth;
+        if(numMoves<2){
+            Player.maxdepth = 2;
+        }
         Node currentNode = game.createNode(Nboard, isPlayerRed?redPieces.size():blackPieces.size(), isPlayerRed?
                         blackPieces.size():redPieces.size(), 0,
                 false,1,
@@ -609,7 +615,7 @@ public class board extends JPanel {
                 isPlayerRed?blackKings:redKings,false,0);
 
         moves = player.iterativeDeepening(currentNode, finalI, finalR);
-
+        Player.maxdepth = storedepth; numMoves++;
         int coords = 0;
         float coordsValue = -Float.MAX_VALUE;
         ArrayList<Integer> chooseRandom = new ArrayList<>();

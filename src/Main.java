@@ -10,9 +10,9 @@ public class Main {
         Menu menu = new Menu();
         menu.display();
     }
-    public void initGame() {
+    public void initGame() throws IOException {
         Game game = new Game();
-        //game.start();
+        game.start();
     }
     public void initBoard() throws IOException {
         board board = new board(new Menu());

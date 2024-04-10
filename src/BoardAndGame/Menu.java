@@ -74,7 +74,7 @@ public class Menu extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 System.out.println("hi");
-                Player.maxdepth=10;
+                Player.maxdepth=9;
                 remove(chooseDifficulty);
                 add(chooseColor);
                 repaint(); revalidate();

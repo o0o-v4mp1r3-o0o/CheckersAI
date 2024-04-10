@@ -618,13 +618,6 @@ public class Game {
 
 
     public void start() throws IOException {
-//        initBoard();
-//        HashMap<String, ArrayList<int[]>> ss = piecesThatCanMove(2, board);
-//        ss.clear();
-//        AI.Tests testing = new AI.Tests();
-//        short[][] testboard = testing.testkingboard();
-//        ss = piecesThatCanMove(2, testboard);
-//        printboard(testboard);
         Player player = new Player();
         Tests testing = new Tests();
         Node node = new Node();
@@ -639,14 +632,6 @@ public class Game {
         node.captureAvailable=false;
         tt tt = new tt();
         tt.zobristFillArrays();
-        Node ttnode = createNode(testing.testxor(),2,1,0,false,1,0,0,true,0);
-        long s = tt.initHash(ttnode,ttnode.depthLevel);
-        Node yynode = createNode(testing.testxor2(),1,1,0,true,1,0,0,true,0);
-        long y = tt.initHash(yynode,yynode.depthLevel);
-        nodeMove(ttnode,1,7,6,5,4);
-        long z = tt.initHash(ttnode,yynode.depthLevel);
-        //predict the capture
-        //initCoords(node);
         Node puzzlesub1node = createNode(testing.puzzleTest1sub1(),8,6,0,false,1,0,0,false,0);
         Node puzzle1node = createNode(testing.puzzleTest1(),8,7,0,false,1,0,0,false,0);
         Node puzzle2node = createNode(testing.puzzleTest2(),4,4,0,false,1,1,2,false,0);
@@ -656,17 +641,32 @@ public class Game {
         long dd = tt.initHash(testcoordsxor1,0);
         long xx = tt.initHash(testcoordsxor2,0);
         Node puzzle2nodesimple = createNode(testing.puzzleTest2simple(),2,2,0,false,1,2,2,false,0);
+        Node puzzleKings = createNode(testing.puzzleKings(),1,1,0,false,1,1,1,false,0);
+        Node onewaytowin = createNode(testing.onewaytowin(),1,1,0,false,1,1,1,false,0);
+        //        long testx = tt.initHash(puzzleKings,0);
+//        nodeMove(puzzleKings,1,4,5,5,6);
+//        long testA = tt.createHash(puzzleKings,0,testx,4,5,5,6,-1,-1,0);
+//        nodeMove(puzzleKings,2,1,6,0,7);
+//        long testB = tt.createHash(puzzleKings,0,testA,1,6,0,7,-1,-1,0);
+//        nodeMove(puzzleKings,1,5,6,4,5);
+//        long testC = tt.createHash(puzzleKings,0,testB,5,6,4,5,-1,-1,0);
+//        nodeMove(puzzleKings,2,0,7,1,6);
+//        long testD = tt.createHash(puzzleKings,0,testC,0,7,1,6,-1,-1,0);
+//        nodeMove(puzzleKings,1,4,5,5,6);
+//        long testE = tt.createHash(puzzleKings,0,testD,4,5,5,6,-1,-1,0);
 
         long start = System.nanoTime()/1000000000;
 //        LinkedHashMap<Integer,Float> testmap = player.shallowSearch(node);
 //        testmap.entrySet().stream().forEach(System.out::println);
         //HashMap<Integer,Float> scores = player.iterateThroughMoves(puzzle2node);
         HashMap<Integer,Float> scores = player.iterativeDeepening(puzzle1node,-1,-1);
-//        long end = System.nanoTime()/1000000000;
+        //HashMap<Integer,Float> scores1 = player.iterativeDeepening(puzzleKings,-1,-1);
+        //HashMap<Integer,Float> scores1 = player.iterativeDeepening(onewaytowin,-1,-1);
         //HashMap<Integer,Float> scores = player.iterateThroughMovesshallow(node);
         long end = System.nanoTime()/1000000000;
         System.out.println(player.numberOfNodes);
-        System.out.println(player.bestmovenotpicked);
+        System.out.println("pruned " + player.nodesPruned+ " nodes");
+        System.out.println("draw positions reached: " + player.drawPositionsReached);
         System.out.println(end-start + " seconds");
     }
 }
